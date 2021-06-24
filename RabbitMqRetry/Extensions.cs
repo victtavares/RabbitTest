@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using RabbitMQ.Client;
 
@@ -16,13 +17,16 @@ namespace RabbitMqRetry {
 
             return retryCount;
         }
-    
-    
+        
+        public static T? GetHeaderValue<T>(this IBasicProperties basicProperties, string key) {
+            var value = basicProperties.Headers?.GetValueOrNull(key);
+            return value is T value1 ? value1 : default;
+        }
+        
         public static TValue? GetValueOrNull<TKey, TValue> 
         (this IDictionary<TKey, TValue> dictionary, 
             TKey key) {
-            TValue value;
-            return dictionary.TryGetValue(key, out value) ? value : default(TValue);
+            return dictionary.TryGetValue(key, out var value2) ? value2 : default;
         }
     
         public static TValue GetValueOrDefault<TKey, TValue> 

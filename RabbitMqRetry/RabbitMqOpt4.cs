@@ -5,42 +5,34 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
 namespace RabbitMqRetry {
-    public class RabbitMqOpt3 {
+    public class RabbitMqOpt4 {
         
         private const int MaxRetries = 3;
         private const int BaseRetryDelay = 3000;
         
         private const string AarinUserExchange = "aarin.users";
         private const string MailmanUserCreatedQueue = "mailman.users.created";
-        private const string AarinUserRetryOneExchange = "aarin.users.retryOne";
-        private const string AarinUserWaitQueue = "aarin.users.wait_queue";
-        private const string AarinUserRetryTwoExchange = "aarin.users.retryTwo";
+        private const string AarinUserRetryExchange = "aarin.users.retry";
         private readonly IModel _channel;
 
-        public RabbitMqOpt3(IModel channel) {
+        public RabbitMqOpt4(IModel channel) {
             _channel = channel;
             //Setup rabbit MQ topology
             _channel.ExchangeDeclare(AarinUserExchange, ExchangeType.Direct);
             _channel.QueueDeclare(MailmanUserCreatedQueue);
-            
-            _channel.ExchangeDeclare(AarinUserRetryOneExchange, ExchangeType.Direct);
-            _channel.QueueDeclare(AarinUserWaitQueue, arguments: new Dictionary<string, object> {
-                { "x-dead-letter-exchange", AarinUserRetryTwoExchange }
+            _channel.ExchangeDeclare(AarinUserRetryExchange, "x-delayed-message", arguments: new Dictionary<string, object> {
+                { "x-delayed-type", "direct" }
             });
             
-            _channel.ExchangeDeclare(AarinUserRetryTwoExchange, ExchangeType.Direct);
-            
             _channel.QueueBind(MailmanUserCreatedQueue, AarinUserExchange, "created");
-            _channel.QueueBind(MailmanUserCreatedQueue, AarinUserRetryTwoExchange, MailmanUserCreatedQueue);
-            _channel.QueueBind(AarinUserWaitQueue, AarinUserRetryOneExchange, MailmanUserCreatedQueue);
+            _channel.QueueBind(MailmanUserCreatedQueue, AarinUserRetryExchange, MailmanUserCreatedQueue);
 
-            
+
             var consumer = new EventingBasicConsumer(_channel);
             
            _channel.BasicConsume(MailmanUserCreatedQueue,false, consumer);
-            //_channel.BasicConsume(AarinUserWaitQueue,false, consumer);
 
-            consumer.Received += (sender, ea) => {
+           consumer.Received += (sender, ea) => {
                 Console.WriteLine("------- Received message-------");
 
                 var retryCount = ea.BasicProperties.GetHeaderValue<long>("x-retries")!;
@@ -56,15 +48,15 @@ namespace RabbitMqRetry {
                     
                     var properties = _channel.CreateBasicProperties();
                     properties.Persistent = true;
-                    properties.Expiration = retryDelay.ToString();
 
                     if (properties.Headers == null) {
                         properties.Headers = new Dictionary<string, object>();
                     }
                     
                     properties.Headers.Add("x-retries", retryCount +1);
+                    properties.Headers.Add("x-delay", retryDelay);
 
-                    _channel.BasicPublish(AarinUserRetryOneExchange, MailmanUserCreatedQueue, properties, body);
+                    _channel.BasicPublish(AarinUserRetryExchange, MailmanUserCreatedQueue, properties, body);
                 } else {
                     Console.WriteLine($"{DateTime.Now} | max retries reached - throwing message");
                 }

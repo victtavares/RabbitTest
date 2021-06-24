@@ -11,7 +11,7 @@ namespace RabbitMqRetry {
             
             using (var connection = factory.CreateConnection())
             using (var channel = connection.CreateModel()) {
-                var rabbitMq = new RabbitMqOpt2(channel);
+                var rabbitMq = new RabbitMqOpt4(channel);
                 rabbitMq.PublishMessage("Hello!");
                 Console.WriteLine(" Press [enter] to exit.");
                 Console.ReadLine();
