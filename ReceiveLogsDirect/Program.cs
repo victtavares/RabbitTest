@@ -14,7 +14,6 @@ namespace ReceiveLogsDirect {
                 channel.ExchangeDeclare(exchange: exchangeName, type: ExchangeType.Direct);
                 var queueName = channel.QueueDeclare().QueueName;
                 
-                
                 if(args.Length == 0) {
                     Console.Error.WriteLine("Usage: {0} [info] [warning] [error]", Environment.GetCommandLineArgs()[0]);
                     return;
@@ -23,7 +22,6 @@ namespace ReceiveLogsDirect {
                 foreach (var severity in args) { 
                     channel.QueueBind(queueName, exchangeName, severity);
                 }
-                
                 
                 Console.WriteLine(" [*] Waiting for logs.");
                 

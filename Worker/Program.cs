@@ -29,7 +29,7 @@ namespace Worker {
 
                     var model = ((EventingBasicConsumer) sender)!.Model;
                     
-                    model.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+                    model.BasicAck(ea.DeliveryTag, false);
                 };
 
                 channel.BasicConsume(taskQueueName, false, consumer);
